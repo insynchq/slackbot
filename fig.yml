@@ -1,0 +1,12 @@
+redis:
+  image: orchardup/redis
+
+slackbot:
+  build: .
+  ports:
+    - "5000:5000"
+  volumes:
+    - .:/slackbot
+  links:
+    - redis:redis
+
