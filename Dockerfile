@@ -1,5 +1,6 @@
 FROM ubuntu
-RUN apt-get -y install python python-pip
+RUN apt-get -y install python python-setuptools
+RUN easy_install -U pip
 RUN pip install Flask
 RUN pip install requests
 RUN pip install redis
