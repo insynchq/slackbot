@@ -16,7 +16,7 @@ db = redis.StrictRedis(
 users = dict()
 for user in requests.get(
   "https://slack.com/api/users.list",
-  params=dict(token=app.confg["SLACK_API_TOKEN"]),
+  params=dict(token=app.config["SLACK_API_TOKEN"]),
 ).json()["members"]:
   users[user["id"]] = user
 
