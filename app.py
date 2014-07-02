@@ -4,6 +4,7 @@ from functools import wraps
 
 import arrow
 import redis
+import requests
 from flask import abort, Flask, jsonify, request
 
 app = Flask(__name__)
@@ -11,6 +12,13 @@ app.config.from_object("config")
 db = redis.StrictRedis(
   host=os.environ.get("REDIS_PORT_6379_TCP_ADDR"),
 )
+
+users = dict()
+for user in requests.get(
+  "https://slack.com/api/users.list",
+  params=dict(token=app.confg["SLACK_API_TOKEN"]),
+).json()["members"]:
+  users[user["id"]] = user
 
 
 def key(*args):
@@ -37,7 +45,7 @@ def slack_hook(mapping):
 
 @app.route("/meals", methods=["POST"])
 @slack_hook(dict(
-  count="ilan,bilang,count",
+  count="ilan,bilang,count,sino",
   lunch="lunch,l,tanghalian",
   merienda="merienda,m",
   dinner="dinner,d,hapunan",
@@ -52,6 +60,10 @@ def meals(events):
         meal.capitalize(),
         db.scard(key(meal, day)),
       )
+      for user_id in db.smembers(key(meal, day)):
+        reply += "    - {}\n".format(
+          users[user_id]["profile"]["real_name"]
+        )
     return jsonify(text=reply)
 
   user_id = request.form["user_id"]
