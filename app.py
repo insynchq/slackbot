@@ -66,9 +66,8 @@ def meals(events):
         for user_id in
         db.smembers(key(meal, day))
       ]
-      for user_id in sorted(names):
-        reply += "    - {}\n".format(
-        )
+      for name in sorted(names):
+        reply += "    - {}\n".format(name)
     return jsonify(text=reply)
 
   user_id = request.form["user_id"]
