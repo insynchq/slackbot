@@ -60,7 +60,7 @@ def meals(events):
         meal.capitalize(),
         db.scard(key(meal, day)),
       )
-      for user_id in db.smembers(key(meal, day)):
+      for user_id in sorted(db.smembers(key(meal, day))):
         reply += "    - {}\n".format(
           users[user_id]["profile"]["real_name"]
         )
