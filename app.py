@@ -62,7 +62,7 @@ def meals(events):
         db.scard(key(meal, day)),
       )
       names = [
-        users[user_id]["profile"]["real_name"]
+        users[user_id]["profile"]["first_name"]
         for user_id in
         db.smembers(key(meal, day))
       ]
