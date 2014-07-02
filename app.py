@@ -33,8 +33,8 @@ def slack_hook(mapping):
       if request.form["token"] != tokens[f.__name__.upper()]:
         abort(403)
       events = set()
+      words = set(request.form["text"].lower().split())
       for event, keywords in mapping.items():
-        words = set(request.form["text"].lower().split())
         if set(keywords.split(",")) & words:
           events.add(event)
       kwargs["events"] = events
@@ -49,6 +49,7 @@ def slack_hook(mapping):
   lunch="lunch,l,tanghalian",
   merienda="merienda,m",
   dinner="dinner,d,hapunan",
+  cancel="hindi,not",
 ))
 def meals(events):
   day = arrow.now().ceil("day").timestamp
@@ -70,7 +71,10 @@ def meals(events):
 
   for meal in "lunch", "merienda", "dinner":
     if meal in events:
-      db.sadd(key(meal, day), user_id)
+      if "cancel" in events:
+        db.srem(key(meal, day), user_id)
+      else:
+        db.sadd(key(meal, day), user_id)
 
   return jsonify(text="")
 
