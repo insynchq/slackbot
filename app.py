@@ -53,7 +53,7 @@ def slack_hook(mapping):
 ))
 def meals(events):
   day = arrow.now().ceil("day")
-  weekday = arrow.locales.get_locale('en_us').day_name(day.weekday())
+  weekday = arrow.locales.get_locale('en_us').day_name(day.isoweekday())
   timestamp = day.timestamp
 
   if "count" in events:
