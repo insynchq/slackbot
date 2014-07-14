@@ -53,11 +53,13 @@ def slack_hook(mapping):
 ))
 def meals(events):
   day = arrow.now().ceil("day")
-  weekday = arrow.locales.get_locale('en_us').day_name(day.isoweekday())
+  weekday = arrow.locales.get_locale('en_us').day_name(
+    day.replace(days+=1).isoweekday()
+  )
   timestamp = day.timestamp
 
   if "count" in events:
-    reply = "{}\n".format(weekday)
+    reply = "*{}*\n\n".format(weekday)
     for meal in "lunch", "merienda", "dinner":
       reply += "{}: {}\n".format(
         meal.capitalize(),
