@@ -57,7 +57,7 @@ def meals(events):
   timestamp = day.timestamp
 
   if "count" in events:
-    reply = "*{}*\n".format(weekday)
+    reply = "{}\n".format(weekday)
     for meal in "lunch", "merienda", "dinner":
       reply += "{}: {}\n".format(
         meal.capitalize(),
@@ -68,7 +68,7 @@ def meals(events):
         for user_id in
         db.smembers(key(meal, timestamp))
       ]
-      reply += ", ".join(sorted(names))
+      reply += "  {}\n".format(", ".join(sorted(names)))
     return jsonify(text=reply)
 
   user_id = request.form["user_id"]
