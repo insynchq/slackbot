@@ -52,22 +52,23 @@ def slack_hook(mapping):
   cancel="hindi,not",
 ))
 def meals(events):
-  day = arrow.now().ceil("day").timestamp
+  day = arrow.now().ceil("day")
+  weekday = arrow.locales.get_locale('en_us').day_name(day.weekday())
+  timestamp = day.timestamp
 
   if "count" in events:
-    reply = ""
+    reply = "*{}*\n".format(weekday)
     for meal in "lunch", "merienda", "dinner":
       reply += "{}: {}\n".format(
         meal.capitalize(),
-        db.scard(key(meal, day)),
+        db.scard(key(meal, timestamp)),
       )
       names = [
         users[user_id]["profile"]["first_name"]
         for user_id in
-        db.smembers(key(meal, day))
+        db.smembers(key(meal, timestamp))
       ]
-      for name in sorted(names):
-        reply += "    - {}\n".format(name)
+      reply += ", ".join(sorted(names))
     return jsonify(text=reply)
 
   user_id = request.form["user_id"]
@@ -75,9 +76,9 @@ def meals(events):
   for meal in "lunch", "merienda", "dinner":
     if meal in events:
       if "cancel" in events:
-        db.srem(key(meal, day), user_id)
+        db.srem(key(meal, timestamp), user_id)
       else:
-        db.sadd(key(meal, day), user_id)
+        db.sadd(key(meal, timestamp), user_id)
 
   return jsonify(text="")
 
