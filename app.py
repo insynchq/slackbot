@@ -54,7 +54,7 @@ def slack_hook(mapping):
 def meals(events):
   day = arrow.now().ceil("day")
   weekday = arrow.locales.get_locale('en_us').day_name(
-    day.replace(days+=1).isoweekday()
+    day.replace(days=1).isoweekday()
   )
   timestamp = day.timestamp
 
