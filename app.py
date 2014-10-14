@@ -7,11 +7,11 @@ import redis
 import requests
 from flask import abort, Flask, jsonify, request
 
+SEMAPHORE_API_URL = "http://www.semaphore.co/api/sms"
+
 app = Flask(__name__)
 app.config.from_object("config")
-db = redis.StrictRedis(
-  host=os.environ.get("REDIS_PORT_6379_TCP_ADDR"),
-)
+db = redis.StrictRedis(host="redis")
 
 users = dict()
 for user in requests.get(
@@ -43,6 +43,31 @@ def slack_hook(mapping):
   return wrapper
 
 
+@app.route("/report/<type>", methods=["POST"])
+def report(type):
+  day = arrow.now().ceil("day")
+  weekday = arrow.locales.get_locale('en_us').day_name(
+    day.replace(days=1).isoweekday()
+  )
+  timestamp = day.timestamp
+  if type == "meals":
+    message = "{}\n\n".format(weekday)
+    for meal in "lunch", "merienda", "dinner":
+      message += "{}: {}\n".format(
+        meal.capitalize(),
+        db.scard(key(meal, timestamp)),
+      )
+    requests.post(
+      SEMAPHORE_API_URL,
+      data=dict(
+        api=app.config["SEMAPHORE_API_TOKEN"],
+        number=app.config["MEALS_REPORT_NUMBER"],
+        message=message,
+      )
+    )
+  return jsonify(ok=True)
+
+
 @app.route("/meals", methods=["POST"])
 @slack_hook(dict(
   count="ilan,bilang,count,sino",
@@ -50,6 +75,7 @@ def slack_hook(mapping):
   merienda="merienda,m",
   dinner="dinner,d,hapunan",
   cancel="hindi,not",
+  tell="sabihin,tell",
 ))
 def meals(events):
   day = arrow.now().ceil("day")

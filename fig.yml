@@ -1,12 +1,20 @@
 redis:
-  image: orchardup/redis
+  image: redis
+  command: redis-server --appendonly yes
 
 slackbot:
   build: .
   ports:
     - "5000:5000"
   volumes:
-    - .:/slackbot
+    - .:/usr/src/app
   links:
     - redis:redis
+
+reporter:
+  build: reporter
+  volumes:
+    - reporter:/usr/src/app
+  links:
+    - slackbot:slackbot
 
