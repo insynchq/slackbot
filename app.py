@@ -75,7 +75,6 @@ def report(type):
   merienda="merienda,m",
   dinner="dinner,d,hapunan",
   cancel="hindi,not",
-  tell="sabihin,tell",
 ))
 def meals(events):
   day = arrow.now().ceil("day")
