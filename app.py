@@ -46,7 +46,7 @@ def slack_hook(mapping):
 @app.route("/report/<type>", methods=["POST"])
 def report(type):
   day = arrow.now().floor("day")
-  if day.weekday() > 3 or day.weekday() < 6:
+  if day.weekday() > 3 and day.weekday() < 6:
     return jsonify(ok=True)
   weekday = arrow.locales.get_locale('en_us').day_name(
     day.replace(days=1).isoweekday()
