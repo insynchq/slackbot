@@ -8,9 +8,9 @@ import requests
 from flask import abort, Flask, jsonify, request
 
 SEMAPHORE_API_URL = "http://www.semaphore.co/api/sms"
-DEFAULT_MEAL_USERS = [
+DEFAULT_MEAL_USERS = set([
   "U025XRFHC",  # Marte
-]
+])
 
 app = Flask(__name__)
 app.config.from_object("config")
@@ -58,7 +58,7 @@ def report(type):
   if type == "meals":
     message = "{}\n\n".format(weekday)
     for meal in "lunch", "merienda", "dinner":
-      meal_users = set(db.smembers(key(meal, timestamp)) + DEFAULT_MEAL_USERS)
+      meal_users = db.smembers(key(meal, timestamp)) | DEFAULT_MEAL_USERS
       message += "{}: {}\n".format(
         meal.capitalize(),
         len(meal_users),
@@ -92,7 +92,7 @@ def meals(events):
   if "count" in events:
     reply = "*{}*\n\n".format(weekday)
     for meal in "lunch", "merienda", "dinner":
-      meal_users = set(db.smembers(key(meal, timestamp)) + DEFAULT_MEAL_USERS)
+      meal_users = db.smembers(key(meal, timestamp)) | DEFAULT_MEAL_USERS
       reply += "{}: {}\n".format(
         meal.capitalize(),
         len(meal_users),
