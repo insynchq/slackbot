@@ -1,5 +1,4 @@
-import os
-import time
+import re
 from functools import wraps
 
 import arrow
@@ -11,6 +10,7 @@ SEMAPHORE_API_URL = "http://www.semaphore.co/api/sms"
 DEFAULT_MEAL_USERS = set([
   "U025XRFHC",  # Marte
 ])
+USER_PAT = re.compile("\<@([A-Z0-9]+)\>")
 
 app = Flask(__name__)
 app.config.from_object("config")
@@ -35,12 +35,26 @@ def slack_hook(mapping):
       tokens = app.config["SLACK_TOKENS"]
       if request.form["token"] != tokens[f.__name__.upper()]:
         abort(403)
+
+      words = []
+      for word in request.form["text"].lower().split():
+        words.append(re.sub("[^a-z0-9'_\-\+]", "", word))
+      kwargs["words"] = words
+
+      # Get events from triggers
       events = set()
-      words = set(request.form["text"].lower().split())
       for event, keywords in mapping.items():
-        if set(keywords.split(",")) & words:
+        if set(keywords.split(",")) & set(words):
           events.add(event)
       kwargs["events"] = events
+
+      # Get tagged users
+      kwargs["tagged_users"] = [
+        users[user_id] for user_id in USER_PAT.findall(
+          request.form["text"]
+        )
+      ]
+
       return f(*args, **kwargs)
     return wrapped
   return wrapper
@@ -82,7 +96,7 @@ def report(type):
   dinner="dinner,d,hapunan",
   cancel="hindi,not",
 ))
-def meals(events):
+def meals(events, **kwargs):
   day = arrow.now().floor("day")
   weekday = arrow.locales.get_locale('en_us').day_name(
     day.replace(days=1).isoweekday()
@@ -112,6 +126,64 @@ def meals(events):
         db.srem(key(meal, timestamp), user_id)
       else:
         db.sadd(key(meal, timestamp), user_id)
+
+  return jsonify(text="")
+
+
+@app.route("/listahan", methods=["POST"])
+@slack_hook(dict(
+  owe="owe,owes,utang",
+  self="sakin,me",
+  others="ako,ko,i",
+))
+def listahan(words, events, tagged_users):
+  amounts = []
+  for word in words:
+    try:
+      amounts.append(float(word))
+    except ValueError:
+      pass
+
+  user_id = request.form["user_id"]
+
+  if not events:
+    reply = ""
+    for tagged_user in tagged_users:
+      for amount in amounts:
+        div_amount = amount / len(tagged_users)
+        db.incrbyfloat(
+          key("listahan", user_id, tagged_user["id"]),
+          div_amount,
+        )
+        reply += "{}: {}\n".format(
+          tagged_user["profile"]["first_name"],
+          div_amount,
+        )
+    return jsonify(text=reply)
+
+  if "owe" in events:
+
+    if "self" in events:
+      reply = ""
+      for user in users.values():
+        amount = db.get(key("listahan", user_id, user["id"]))
+        if amount and float(amount):
+          reply += "{} owes you {}\n".format(
+            user["profile"]["first_name"],
+            amount,
+          )
+      return jsonify(text=reply or "No one")
+
+    if "others" in events:
+      reply = ""
+      for user in users.values():
+        amount = db.get(key("listahan", user["id"], user_id))
+        if amount and float(amount):
+          reply += "You owe {} {}\n".format(
+            user["profile"]["first_name"],
+            amount,
+          )
+      return jsonify(text=reply or "No one")
 
   return jsonify(text="")
 
