@@ -11,6 +11,7 @@ DEFAULT_MEAL_USERS = set([
   "U025XRFHC",  # Marte
 ])
 USER_PAT = re.compile("\<@([A-Z0-9]+)\>")
+LISTAHAN_BOT_NAME = "Loan Druid"
 
 app = Flask(__name__)
 app.config.from_object("config")
@@ -159,7 +160,7 @@ def listahan(words, events, tagged_users):
           tagged_user["profile"]["first_name"],
           div_amount,
         )
-    return jsonify(text=reply)
+    return jsonify(username=LISTAHAN_BOT_NAME, text=reply)
 
   if "owe" in events:
 
@@ -172,7 +173,7 @@ def listahan(words, events, tagged_users):
             user["profile"]["first_name"],
             amount,
           )
-      return jsonify(text=reply or "No one")
+      return jsonify(username=LISTAHAN_BOT_NAME, text=reply or "No one")
 
     if "others" in events:
       reply = ""
@@ -183,7 +184,7 @@ def listahan(words, events, tagged_users):
             user["profile"]["first_name"],
             amount,
           )
-      return jsonify(text=reply or "No one")
+      return jsonify(username=LISTAHAN_BOT_NAME, text=reply or "No one")
 
   return jsonify(text="")
 
