@@ -114,7 +114,7 @@ def meals(events, **kwargs):
       )
       names = [
         users[user_id]["profile"]["first_name"]
-        for user_id in meal_users
+        for user_id in meal_users if user_id in users
       ]
       reply += "  {}\n".format(", ".join(sorted(names)))
     return jsonify(text=reply)
