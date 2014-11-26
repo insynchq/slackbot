@@ -5,8 +5,9 @@ import arrow
 import redis
 import requests
 from flask import abort, Flask, jsonify, request
+from simpleflake import simpleflake
 
-SEMAPHORE_API_URL = "http://www.semaphore.co/api/sms"
+CHIKKA_API_URL = "https://post.chikka.com/smsapi/request"
 DEFAULT_MEAL_USERS = set([
   "U025XRFHC",  # Marte
 ])
@@ -79,11 +80,15 @@ def report(type):
         len(meal_users),
       )
     requests.post(
-      SEMAPHORE_API_URL,
+      CHIKKA_API_URL,
       data=dict(
-        api=app.config["SEMAPHORE_API_TOKEN"],
-        number=app.config["MEALS_REPORT_NUMBER"],
+        message_type="SEND",
+        mobile_number=app.config["MEALS_REPORT_NUMBER"],
+        shortcode=app.config["CHIKKA_SHORTCODE"],
+        message_id=str(simpleflake()),
         message=message,
+        client_id=app.config["CHIKKA_CLIENT_ID"],
+        secret_key=app.config["CHIKKA_SECRET_KEY"],
       )
     )
   return jsonify(ok=True)
