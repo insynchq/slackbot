@@ -79,18 +79,19 @@ def report(type):
         meal.capitalize(),
         len(meal_users),
       )
-    requests.post(
-      CHIKKA_API_URL,
-      data=dict(
-        message_type="SEND",
-        mobile_number=app.config["MEALS_REPORT_NUMBER"],
-        shortcode=app.config["CHIKKA_SHORTCODE"],
-        message_id=str(simpleflake()),
-        message=message,
-        client_id=app.config["CHIKKA_CLIENT_ID"],
-        secret_key=app.config["CHIKKA_SECRET_KEY"],
+    for mobile_number in app.config["MEALS_REPORT_NUMBERS"]:
+      requests.post(
+        CHIKKA_API_URL,
+        data=dict(
+          message_type="SEND",
+          mobile_number=mobile_number,
+          shortcode=app.config["CHIKKA_SHORTCODE"],
+          message_id=str(simpleflake()),
+          message=message,
+          client_id=app.config["CHIKKA_CLIENT_ID"],
+          secret_key=app.config["CHIKKA_SECRET_KEY"],
+        )
       )
-    )
   return jsonify(ok=True)
 
 
