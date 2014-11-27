@@ -87,7 +87,7 @@ def report(type):
           mobile_number=mobile_number,
           shortcode=app.config["CHIKKA_SHORTCODE"],
           message_id=str(simpleflake()),
-          message=message,
+          message=message + '\n\n*',
           client_id=app.config["CHIKKA_CLIENT_ID"],
           secret_key=app.config["CHIKKA_SECRET_KEY"],
         )
