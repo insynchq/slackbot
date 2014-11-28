@@ -12,22 +12,43 @@ DEFAULT_MEAL_USERS = set([
   "U025XRFHC",  # Marte
 ])
 USER_PAT = re.compile("\<@([A-Z0-9]+)\>")
-LISTAHAN_BOT_NAME = "Loan Druid"
 
 app = Flask(__name__)
 app.config.from_object("config")
 db = redis.StrictRedis(host="redis")
 
-users = dict()
-for user in requests.get(
-  "https://slack.com/api/users.list",
-  params=dict(token=app.config["SLACK_API_TOKEN"]),
-).json()["members"]:
-  users[user["id"]] = user
+users = {
+  user["id"]: user for user in requests.get(
+    "https://slack.com/api/users.list",
+    params=dict(token=app.config["SLACK_API_TOKEN"]),
+  ).json()["members"]
+}
+
+channels = {
+  channel["name"]: channel for channel in requests.get(
+    "https://slack.com/api/channels.list",
+    params=dict(token=app.config["SLACK_API_TOKEN"]),
+  ).json()["channels"]
+}
 
 
 def key(*args):
   return ":".join(map(str, args))
+
+
+def send_sms(mobile_number, message):
+  requests.post(
+    CHIKKA_API_URL,
+    data=dict(
+      message_type="SEND",
+      mobile_number=mobile_number,
+      shortcode=app.config["CHIKKA_SHORTCODE"],
+      message_id=str(simpleflake()),
+      message=message + '\n\n*',
+      client_id=app.config["CHIKKA_CLIENT_ID"],
+      secret_key=app.config["CHIKKA_SECRET_KEY"],
+    )
+  )
 
 
 def slack_hook(mapping):
@@ -80,18 +101,7 @@ def report(type):
         len(meal_users),
       )
     for mobile_number in app.config["MEALS_REPORT_NUMBERS"]:
-      requests.post(
-        CHIKKA_API_URL,
-        data=dict(
-          message_type="SEND",
-          mobile_number=mobile_number,
-          shortcode=app.config["CHIKKA_SHORTCODE"],
-          message_id=str(simpleflake()),
-          message=message + '\n\n*',
-          client_id=app.config["CHIKKA_CLIENT_ID"],
-          secret_key=app.config["CHIKKA_SECRET_KEY"],
-        )
-      )
+      send_sms(mobile_number, message)
   return jsonify(ok=True)
 
 
@@ -166,7 +176,7 @@ def listahan(words, events, tagged_users):
           tagged_user["profile"]["first_name"],
           div_amount,
         )
-    return jsonify(username=LISTAHAN_BOT_NAME, text=reply)
+    return jsonify(text=reply)
 
   if "owe" in events:
 
@@ -179,7 +189,7 @@ def listahan(words, events, tagged_users):
             user["profile"]["first_name"],
             amount,
           )
-      return jsonify(username=LISTAHAN_BOT_NAME, text=reply or "No one")
+      return jsonify(text=reply or "No one")
 
     if "others" in events:
       reply = ""
@@ -190,7 +200,78 @@ def listahan(words, events, tagged_users):
             user["profile"]["first_name"],
             amount,
           )
-      return jsonify(username=LISTAHAN_BOT_NAME, text=reply or "No one")
+      return jsonify(text=reply or "No one")
+
+  return jsonify(text="")
+
+
+@app.route("/monito_monita", methods=["POST"])
+@slack_hook(dict(
+  set_number="number",
+  draw="draw,bunot",
+  send="send",
+))
+def monito_monita(words, events, **kwargs):
+  if "set_number" in events:
+    user_id = request.form["user_id"]
+    number = None
+    for word in words:
+      try:
+        if word.startswith("63"):
+          number = int(word)
+          break
+      except ValueError:
+        pass
+    if number:
+      db.set(
+        key("monito_monita", "number", user_id),
+        number,
+      )
+      return jsonify(text="Saved your number")
+
+  if "draw" in events:
+    pot = channels["monito_monita"]["members"]
+
+    # Check numbers
+    for user_id in pot:
+      if not db.exists(
+        key("monito_monita", "number", user_id)
+      ):
+        user = users[user_id]
+        return jsonify(
+          text="I don't have {}'s number yet".format(
+            user["profile"]["first_name"],
+          ),
+        )
+
+    # Clear previous draw
+    db.delete(key("monito_monita"))
+
+    # Draw
+    for pair in [
+      "{}:{}".format(
+        user_id,
+        pot[(i + 1) % len(pot)],
+      ) for i, user_id in enumerate(pot)
+    ]:
+      db.sadd(key("monito_monita"), pair)
+
+    return jsonify(text="Drawn! You can tell me to send anytime.")
+
+  if "send" in events:
+    pairs = db.smembers(key("monito_monita"))
+    if pairs:
+      for pair in pairs:
+        giver_id, givee_id = pair.split(":")
+        givee = users[givee_id]
+        mobile_number = db.get(
+          key("monito_monita", "number", giver_id),
+        )
+        message = "Monito Monita\n\nYou drew {}!".format(
+          givee["profile"]["first_name"],
+        )
+        send_sms(mobile_number, message)
+      return jsonify(text="Sent!")
 
   return jsonify(text="")
 
