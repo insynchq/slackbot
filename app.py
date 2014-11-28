@@ -256,7 +256,7 @@ def monito_monita(words, events, **kwargs):
     ]:
       db.sadd(key("monito_monita"), pair)
 
-    return jsonify(text="Drawn! You can tell me to send anytime.")
+    return jsonify(text="Drawn!")
 
   if "send" in events:
     pairs = db.smembers(key("monito_monita"))
