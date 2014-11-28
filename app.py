@@ -1,3 +1,4 @@
+import random
 import re
 from functools import wraps
 
@@ -17,23 +18,27 @@ app = Flask(__name__)
 app.config.from_object("config")
 db = redis.StrictRedis(host="redis")
 
-users = {
-  user["id"]: user for user in requests.get(
-    "https://slack.com/api/users.list",
-    params=dict(token=app.config["SLACK_API_TOKEN"]),
-  ).json()["members"]
-}
-
-channels = {
-  channel["name"]: channel for channel in requests.get(
-    "https://slack.com/api/channels.list",
-    params=dict(token=app.config["SLACK_API_TOKEN"]),
-  ).json()["channels"]
-}
-
 
 def key(*args):
   return ":".join(map(str, args))
+
+
+def get_users():
+  return {
+    user["id"]: user for user in requests.get(
+      "https://slack.com/api/users.list",
+      params=dict(token=app.config["SLACK_API_TOKEN"]),
+    ).json()["members"]
+  }
+
+
+def get_channels():
+  return {
+    channel["name"]: channel for channel in requests.get(
+      "https://slack.com/api/channels.list",
+      params=dict(token=app.config["SLACK_API_TOKEN"]),
+    ).json()["channels"]
+  }
 
 
 def send_sms(mobile_number, message):
@@ -72,6 +77,7 @@ def slack_hook(mapping):
       kwargs["events"] = events
 
       # Get tagged users
+      users = get_users()
       kwargs["tagged_users"] = [
         users[user_id] for user_id in USER_PAT.findall(
           request.form["text"]
@@ -122,6 +128,7 @@ def meals(events, **kwargs):
 
   if "count" in events:
     reply = "*{}*\n\n".format(weekday)
+    users = get_users()
     for meal in "lunch", "merienda", "dinner":
       meal_users = db.smembers(key(meal, timestamp)) | DEFAULT_MEAL_USERS
       reply += "{}: {}\n".format(
@@ -180,6 +187,8 @@ def listahan(words, events, tagged_users):
 
   if "owe" in events:
 
+    users = get_users()
+
     if "self" in events:
       reply = ""
       for user in users.values():
@@ -230,7 +239,10 @@ def monito_monita(words, events, **kwargs):
       return jsonify(text="Saved your number")
 
   if "draw" in events:
+    channels = get_channels()
     pot = channels["monito_monita"]["members"]
+    random.shuffle(pot)
+    users = get_users()
 
     # Check numbers
     for user_id in pot:
