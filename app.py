@@ -272,6 +272,7 @@ def monito_monita(words, events, **kwargs):
 
   if "send" in events:
     pairs = db.smembers(key("monito_monita"))
+    users = get_users()
     if pairs:
       for pair in pairs:
         giver_id, givee_id = pair.split(":")
