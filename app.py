@@ -175,13 +175,13 @@ def listahan(words, events, tagged_users):
     for tagged_user in tagged_users:
       for amount in amounts:
         div_amount = amount / len(tagged_users)
-        db.incrbyfloat(
+        total_amount = db.incrbyfloat(
           key("listahan", user_id, tagged_user["id"]),
           div_amount,
         )
         reply += "{}: {}\n".format(
           tagged_user["profile"]["first_name"],
-          div_amount,
+          total_amount,
         )
     return jsonify(text=reply)
 
