@@ -12,12 +12,3 @@ slackbot:
     - .:/usr/src/app
   links:
     - redis:redis
-
-reporter:
-  hostname: slackbot-reporter
-  build: reporter
-  volumes:
-    - reporter:/usr/src/app
-  links:
-    - slackbot:slackbot
-
